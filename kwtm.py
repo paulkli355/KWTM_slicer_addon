@@ -187,7 +187,7 @@ class kwtmLogic(ScriptedLoadableModuleLogic):
 
     # Compute the thresholded output volume using the Threshold Scalar Volume CLI module
     cliParams = {'InputVolume': inputVolume.GetID(), 'OutputVolume': outputVolume.GetID(), 'ThresholdValue' : imageThreshold, 'ThresholdType' : 'Above'}
-    cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True)
+    cliNode = slicer.cli.changeOpacity(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True)
 
     # Capture screenshot
     if enableScreenshots:

@@ -5,7 +5,7 @@ from slicer.ScriptedLoadableModule import *
 import logging
 
 #
-# kwtm
+# kwtm - Paulina Klimanek - 09.06.2022
 #
 
 class kwtm(ScriptedLoadableModule):
@@ -42,9 +42,7 @@ class kwtmWidget(ScriptedLoadableModuleWidget):
     ScriptedLoadableModuleWidget.setup(self)
 
     # Instantiate and connect widgets ...
-
-    #
-    # Parameters Area
+    # Parameters Area -
     #
     parametersCollapsibleButton = ctk.ctkCollapsibleButton()
     parametersCollapsibleButton.text = "Parameters"
@@ -53,67 +51,46 @@ class kwtmWidget(ScriptedLoadableModuleWidget):
     # Layout within the dummy collapsible button
     parametersFormLayout = qt.QFormLayout(parametersCollapsibleButton)
 
-    #
-    # input volume selector
-    #
-    self.inputSelector = slicer.qMRMLNodeComboBox()
-    self.inputSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-    self.inputSelector.selectNodeUponCreation = True
-    self.inputSelector.addEnabled = False
-    self.inputSelector.removeEnabled = False
-    self.inputSelector.noneEnabled = False
-    self.inputSelector.showHidden = False
-    self.inputSelector.showChildNodeTypes = False
-    self.inputSelector.setMRMLScene( slicer.mrmlScene )
-    self.inputSelector.setToolTip( "Pick the input to the algorithm." )
-    parametersFormLayout.addRow("Input Volume: ", self.inputSelector)
 
-    #
-    # output volume selector
-    #
-    self.outputSelector = slicer.qMRMLNodeComboBox()
-    self.outputSelector.nodeTypes = ["vtkMRMLScalarVolumeNode"]
-    self.outputSelector.selectNodeUponCreation = True
-    self.outputSelector.addEnabled = True
-    self.outputSelector.removeEnabled = True
-    self.outputSelector.noneEnabled = True
-    self.outputSelector.showHidden = False
-    self.outputSelector.showChildNodeTypes = False
-    self.outputSelector.setMRMLScene( slicer.mrmlScene )
-    self.outputSelector.setToolTip( "Pick the output to the algorithm." )
-    parametersFormLayout.addRow("Output Volume: ", self.outputSelector)
+    # input model selector
+    self.inputModelSelector = slicer.qMRMLNodeComboBox()
+    self.inputModelSelector.nodeTypes = ["vtkMRMLModelNode"]
+    self.inputModelSelector.selectNodeUponCreation = True
+    self.inputModelSelector.addEnabled = False
+    self.inputModelSelector.removeEnabled = False
+    self.inputModelSelector.noneEnabled = False
+    self.inputModelSelector.showHidden = False
+    self.inputModelSelector.showChildNodeTypes = False
+    self.inputModelSelector.setMRMLScene(slicer.mrmlScene)
+    self.inputModelSelector.setToolTip("Pick the model input to the algorithm.")
+    parametersFormLayout.addRow("Input Model: ", self.inputModelSelector)
 
-    #
-    # threshold value
-    #
-    self.imageThresholdSliderWidget = ctk.ctkSliderWidget()
-    self.imageThresholdSliderWidget.singleStep = 0.1
-    self.imageThresholdSliderWidget.minimum = -100
-    self.imageThresholdSliderWidget.maximum = 100
-    self.imageThresholdSliderWidget.value = 0.5
-    self.imageThresholdSliderWidget.setToolTip("Set threshold value for computing the output image. Voxels that have intensities lower than this value will set to zero.")
-    parametersFormLayout.addRow("Image threshold", self.imageThresholdSliderWidget)
+    # model opacity slider
+    self.modelOpacitySliderWidget = ctk.ctkSliderWidget()
+    self.modelOpacitySliderWidget.singleStep = 0.1
+    self.modelOpacitySliderWidget.minimum = 0.0
+    self.modelOpacitySliderWidget.maximum = 100.0
+    self.modelOpacitySliderWidget.value = 70.0
+    self.modelOpacitySliderWidget.setToolTip("Set opacity value for computing the model.")
+    parametersFormLayout.addRow("Model opacity:", self.modelOpacitySliderWidget)
 
-    #
-    # check box to trigger taking screen shots for later use in tutorials
-    #
-    self.enableScreenshotsFlagCheckBox = qt.QCheckBox()
-    self.enableScreenshotsFlagCheckBox.checked = 0
-    self.enableScreenshotsFlagCheckBox.setToolTip("If checked, take screen shots for tutorials. Use Save Data to write them to disk.")
-    parametersFormLayout.addRow("Enable Screenshots", self.enableScreenshotsFlagCheckBox)
-
-    #
-    # Apply Button
-    #
+    # apply button - changes model opacity
     self.applyButton = qt.QPushButton("Apply")
-    self.applyButton.toolTip = "Run the algorithm."
+    self.applyButton.toolTip = "Change opacity of a model."
     self.applyButton.enabled = False
     parametersFormLayout.addRow(self.applyButton)
 
+    # visibility button - changes model visibility
+    self.visibilityOnOffButton = qt.QPushButton("Model visibility On/Off")
+    self.visibilityOnOffButton.toolTip = "Change model visibility."
+    self.visibilityOnOffButton.enabled = True
+    parametersFormLayout.addRow(self.visibilityOnOffButton)
+
     # connections
-    self.applyButton.connect('clicked(bool)', self.onApplyButton)
-    self.inputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
-    self.outputSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    self.inputModelSelector.connect("currentNodeChanged(vtkMRMLNode*)", self.onSelect)
+    self.applyButton.connect('clicked(bool)', self.onOpacityButton)
+    self.visibilityOnOffButton.connect('clicked(bool)', self.onVisibilityButton)
+
 
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -121,17 +98,21 @@ class kwtmWidget(ScriptedLoadableModuleWidget):
     # Refresh Apply button state
     self.onSelect()
 
+
   def cleanup(self):
     pass
 
   def onSelect(self):
-    self.applyButton.enabled = self.inputSelector.currentNode() and self.outputSelector.currentNode()
+    self.applyButton.enabled = self.inputModelSelector.currentNode()
 
-  def onApplyButton(self):
+  def onOpacityButton(self):
     logic = kwtmLogic()
-    enableScreenshotsFlag = self.enableScreenshotsFlagCheckBox.checked
-    imageThreshold = self.imageThresholdSliderWidget.value
-    logic.run(self.inputSelector.currentNode(), self.outputSelector.currentNode(), imageThreshold, enableScreenshotsFlag)
+    modelOpacityValue = self.modelOpacitySliderWidget.value
+    logic.changeOpacity(self.inputModelSelector.currentNode(), modelOpacityValue)
+
+  def onVisibilityButton(self):
+    logic = kwtmLogic()
+    logic.changeVisibility(self.inputModelSelector.currentNode())
 
 #
 # kwtmLogic
@@ -147,51 +128,50 @@ class kwtmLogic(ScriptedLoadableModuleLogic):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  def hasImageData(self,volumeNode):
+  def hasImageData(self, volumeNode):
     """This is an example logic method that
     returns true if the passed in volume
     node has valid image data
     """
     if not volumeNode:
-      logging.debug('hasImageData failed: no volume node')
+      logging.debug('hasPolyData failed: no volume node')
       return False
-    if volumeNode.GetImageData() is None:
-      logging.debug('hasImageData failed: no image data in volume node')
+    if volumeNode.GetPolyData() is None:
+      logging.debug('hasPolyData failed: no image data in volume node')
       return False
     return True
 
-  def isValidInputOutputData(self, inputVolumeNode, outputVolumeNode):
-    """Validates if the output is not the same as input
+
+  def changeOpacity(self, inputModel, modelOpacityValue):
     """
-    if not inputVolumeNode:
-      logging.debug('isValidInputOutputData failed: no input volume node defined')
-      return False
-    if not outputVolumeNode:
-      logging.debug('isValidInputOutputData failed: no output volume node defined')
-      return False
-    if inputVolumeNode.GetID()==outputVolumeNode.GetID():
-      logging.debug('isValidInputOutputData failed: input and output volume is the same. Create a new volume for output to avoid this error.')
-      return False
+    Change opacity of a selected model based on a value from slider
+    """
+
+    logging.info('Processing started')
+
+    model = inputModel.GetDisplayNode()
+    model.SetOpacity(modelOpacityValue / 100.0)
+    print(modelOpacityValue)
+
+    logging.info('Processing completed - opacity changed')
+
     return True
 
-  def run(self, inputVolume, outputVolume, imageThreshold, enableScreenshots=0):
+
+  def changeVisibility(self, inputModel):
     """
     Run the actual algorithm
     """
 
-    if not self.isValidInputOutputData(inputVolume, outputVolume):
-      slicer.util.errorDisplay('Input volume is the same as output volume. Choose a different output volume.')
-      return False
-
     logging.info('Processing started')
 
-    # Compute the thresholded output volume using the Threshold Scalar Volume CLI module
-    cliParams = {'InputVolume': inputVolume.GetID(), 'OutputVolume': outputVolume.GetID(), 'ThresholdValue' : imageThreshold, 'ThresholdType' : 'Above'}
-    cliNode = slicer.cli.run(slicer.modules.thresholdscalarvolume, None, cliParams, wait_for_completion=True)
-
-    # Capture screenshot
-    if enableScreenshots:
-      self.takeScreenshot('kwtmTest-Start','MyScreenshot',-1)
+    model = inputModel.GetDisplayNode()
+    if model.GetVisibility() == 0:
+      model.VisibilityOn()
+      logging.info('Model visibility enabled')
+    else:
+      model.VisibilityOff()
+      logging.info('Model visibility disabled')
 
     logging.info('Processing completed')
 
